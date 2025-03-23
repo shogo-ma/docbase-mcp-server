@@ -1,0 +1,11 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  call-test:
+    name: Test
+    uses: ./.github/workflows/test.yml
