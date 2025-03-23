@@ -13,8 +13,11 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
-func NewSearchPostsTool() (mcp.Tool, server.ToolHandlerFunc) {
-	return newSearchPostsTool(), handleSearchPostsRequest
+func NewSearchPostsTool() server.ServerTool {
+	return server.ServerTool{
+		Tool:    newSearchPostsTool(),
+		Handler: handleSearchPostsRequest,
+	}
 }
 
 func newSearchPostsTool() mcp.Tool {

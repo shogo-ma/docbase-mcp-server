@@ -1,6 +1,7 @@
 package docbase
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -48,6 +49,24 @@ type SearchQuery struct {
 	Page    int    // ページ番号 (1-indexed)
 	PerPage int    // 1ページあたりの結果数
 }
+
+type CreatePostParam struct {
+	Title  string   `json:"title"`
+	Body   string   `json:"body"`
+	Draft  bool     `json:"draft"`
+	Notice bool     `json:"notice"`
+	Tags   []string `json:"tags"`
+	Scope  Scope    `json:"scope"`
+	Groups []int    `json:"groups"`
+}
+
+type Scope string
+
+const (
+	ScopeAll     Scope = "everyone"
+	ScopeGroup   Scope = "group"
+	ScopePrivate Scope = "private"
+)
 
 type DocBaseClient struct {
 	Client   *http.Client
@@ -140,4 +159,38 @@ func (c *DocBaseClient) SearchPosts(ctx context.Context, query SearchQuery) (*Se
 	}
 
 	return &searchResp, nil
+}
+
+func (c *DocBaseClient) CreatePost(ctx context.Context, param CreatePostParam) (*GetPostResponse, error) {
+	url := fmt.Sprintf("%s/posts", c.BaseURL)
+
+	body, err := json.Marshal(param)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request body: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("X-DocBaseToken", c.APIToken)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.Client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	var post GetPostResponse
+	if err := json.NewDecoder(resp.Body).Decode(&post); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return &post, nil
 }

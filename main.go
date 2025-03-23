@@ -15,8 +15,11 @@ func main() {
 		server.WithLogging(),
 	)
 
-	s.AddTool(tools.NewGetPostTool())
-	s.AddTool(tools.NewSearchPostsTool())
+	s.AddTools(
+		tools.NewCreatePostTool(),
+		tools.NewGetPostTool(),
+		tools.NewSearchPostsTool(),
+	)
 
 	if err := server.ServeStdio(s); err != nil {
 		log.Fatalf("Failed to start server: %v", err)

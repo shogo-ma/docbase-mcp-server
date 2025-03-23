@@ -13,8 +13,11 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
-func NewGetPostTool() (mcp.Tool, server.ToolHandlerFunc) {
-	return newGetPostTool(), handleGetPostRequest
+func NewGetPostTool() server.ServerTool {
+	return server.ServerTool{
+		Tool:    newGetPostTool(),
+		Handler: handleGetPostRequest,
+	}
 }
 
 func newGetPostTool() mcp.Tool {
