@@ -205,6 +205,7 @@ type UpdatePostParam struct {
 	Groups []int    `json:"groups,omitempty"`
 }
 
+// UpdatePost はDocBase APIを使用して既存の投稿を更新します
 // PATCH /teams/:domain/posts/:id
 func (c *DocBaseClient) UpdatePost(ctx context.Context, postID int64, param UpdatePostParam) (*GetPostResponse, error) {
 	url := fmt.Sprintf("%s/posts/%d", c.BaseURL, postID)
@@ -238,4 +239,54 @@ func (c *DocBaseClient) UpdatePost(ctx context.Context, postID int64, param Upda
 	}
 
 	return &post, nil
+}
+
+// CommentResponse はコメント投稿APIのレスポンスを表します
+type CommentResponse struct {
+	ID        int64     `json:"id"`
+	Body      string    `json:"body"`
+	CreatedAt time.Time `json:"created_at"`
+	User      User      `json:"user"`
+}
+
+// CreateCommentParam はコメント投稿APIのパラメータを表します
+type CreateCommentParam struct {
+	Body   string `json:"body"`   // コメント本文（必須）
+	Notice bool   `json:"notice"` // 通知するかどうか（任意、デフォルトはtrue）
+}
+
+// CreateComment は投稿にコメントを追加します
+// POST /teams/:domain/posts/:id/comments
+func (c *DocBaseClient) CreateComment(ctx context.Context, postID int64, param CreateCommentParam) (*CommentResponse, error) {
+	url := fmt.Sprintf("%s/posts/%d/comments", c.BaseURL, postID)
+
+	body, err := json.Marshal(param)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request body: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("X-DocBaseToken", c.APIToken)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.Client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	var comment CommentResponse
+	if err := json.NewDecoder(resp.Body).Decode(&comment); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return &comment, nil
 }

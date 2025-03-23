@@ -20,6 +20,7 @@ func main() {
 		tools.NewGetPostTool(),
 		tools.NewSearchPostsTool(),
 		tools.NewUpdatePostTool(),
+		tools.NewCreateCommentTool(),
 	)
 
 	if err := server.ServeStdio(s); err != nil {
