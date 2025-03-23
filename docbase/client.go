@@ -194,3 +194,48 @@ func (c *DocBaseClient) CreatePost(ctx context.Context, param CreatePostParam) (
 
 	return &post, nil
 }
+
+type UpdatePostParam struct {
+	Title  string   `json:"title,omitempty"`
+	Body   string   `json:"body,omitempty"`
+	Draft  *bool    `json:"draft,omitempty"`
+	Notice *bool    `json:"notice,omitempty"`
+	Tags   []string `json:"tags,omitempty"`
+	Scope  Scope    `json:"scope,omitempty"`
+	Groups []int    `json:"groups,omitempty"`
+}
+
+// PATCH /teams/:domain/posts/:id
+func (c *DocBaseClient) UpdatePost(ctx context.Context, postID int64, param UpdatePostParam) (*GetPostResponse, error) {
+	url := fmt.Sprintf("%s/posts/%d", c.BaseURL, postID)
+
+	body, err := json.Marshal(param)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request body: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPatch, url, bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("X-DocBaseToken", c.APIToken)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.Client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	var post GetPostResponse
+	if err := json.NewDecoder(resp.Body).Decode(&post); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return &post, nil
+}
