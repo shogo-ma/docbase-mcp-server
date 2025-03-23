@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -27,6 +28,25 @@ type User struct {
 
 type Tag struct {
 	Name string `json:"name"`
+}
+
+// SearchPostsResponse は検索結果のレスポンスを表します
+type SearchPostsResponse struct {
+	Posts []GetPostResponse `json:"posts"`
+	Meta  Meta              `json:"meta"`
+}
+
+type Meta struct {
+	PreviousPage *int `json:"previous_page"`
+	NextPage     *int `json:"next_page"`
+	Total        int  `json:"total"`
+}
+
+// SearchQuery は検索クエリのパラメータを表します
+type SearchQuery struct {
+	Q       string // 検索クエリ
+	Page    int    // ページ番号 (1-indexed)
+	PerPage int    // 1ページあたりの結果数
 }
 
 type DocBaseClient struct {
@@ -71,4 +91,53 @@ func (c *DocBaseClient) GetPost(ctx context.Context, postID int64) (*GetPostResp
 	}
 
 	return &post, nil
+}
+
+func (c *DocBaseClient) SearchPosts(ctx context.Context, query SearchQuery) (*SearchPostsResponse, error) {
+	baseURL := fmt.Sprintf("%s/posts", c.BaseURL)
+	u, err := url.Parse(baseURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse URL: %w", err)
+	}
+
+	q := u.Query()
+
+	if query.Q != "" {
+		q.Set("q", query.Q)
+	}
+
+	if query.Page > 0 {
+		q.Set("page", fmt.Sprintf("%d", query.Page))
+	}
+
+	if query.PerPage > 0 {
+		q.Set("per_page", fmt.Sprintf("%d", query.PerPage))
+	}
+
+	u.RawQuery = q.Encode()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("X-DocBaseToken", c.APIToken)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.Client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	var searchResp SearchPostsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&searchResp); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return &searchResp, nil
 }

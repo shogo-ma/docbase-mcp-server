@@ -10,10 +10,11 @@ import (
 	"docbase-mcp-server/docbase"
 
 	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
 )
 
-func NewGetPostTool() (mcp.Tool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error)) {
-	return newGetPostTool(), newGetPostHandler
+func NewGetPostTool() (mcp.Tool, server.ToolHandlerFunc) {
+	return newGetPostTool(), handleGetPostRequest
 }
 
 func newGetPostTool() mcp.Tool {
@@ -28,8 +29,7 @@ func newGetPostTool() mcp.Tool {
 	)
 }
 
-// newGetPostHandler is the handler for the get_post tool.
-func newGetPostHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func handleGetPostRequest(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	client := docbase.NewDocBaseClient(
 		os.Getenv("DOCBASE_API_DOMAIN"),
 		os.Getenv("DOCBASE_API_TOKEN"),
